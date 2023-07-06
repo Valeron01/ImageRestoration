@@ -4,11 +4,9 @@ import torch
 from torch import nn
 from tqdm import trange
 
-from conv_blocks import ResBlock, ConvBnReluBlock, DWConvBnReluBlock, SingleConvResBlock, ConvNextBlock
-
 
 class UNet(nn.Module):
-    def __init__(self, n_features_list, block: typing.Type = DWConvBnReluBlock):
+    def __init__(self, n_features_list, block: typing.Type):
         super().__init__()
         self.n_features_list = n_features_list
 
@@ -33,7 +31,9 @@ class UNet(nn.Module):
                     out_channels=out_features
                 ),
                 nn.UpsamplingBilinear2d(scale_factor=2)
-            ) for current_depth, (in_features, out_features) in enumerate(zip(reversed(n_features_list[1:]), reversed(n_features_list[:-1])))
+            ) for current_depth, (in_features, out_features) in enumerate(
+                zip(reversed(n_features_list[1:]), reversed(n_features_list[:-1]))
+            )
         ])
 
         self.resulting_layer = nn.Conv2d(2 * n_features_list[0], 3, 1)
@@ -53,17 +53,3 @@ class UNet(nn.Module):
             previous_stage = torch.cat([encoder_features, new_stage], dim=1)
 
         return self.resulting_layer(previous_stage)
-
-
-if __name__ == '__main__':
-    model = UNet([64, 128, 256, 512, 1024], block=ConvNextBlock).cuda()
-    num_params = 0
-    for param in model.parameters():
-        num_params += param.numel()
-    print(f"Params num is: {num_params / 1e6}M")
-
-    with torch.no_grad():
-        for i in trange(1000):
-            result = model(torch.randn(16, 3, 256, 256, device="cuda")).sum().item()
-
-    # torch.onnx.export(model, torch.randn(1, 3, 256, 256), "./model.onnx", opset_version=17)

@@ -35,6 +35,7 @@ class SimpleDenoiser(pl.LightningModule):
     def training_step(self, batch, *args):
         loss = self.model_step(batch)
         self.log("train_loss", loss, prog_bar=True)
+        return loss
 
     def validation_step(self, batch, *args):
         loss = self.model_step(batch)
