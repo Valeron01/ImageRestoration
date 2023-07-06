@@ -4,7 +4,7 @@ import torch
 from torch import nn
 from tqdm import trange
 
-from blocks import ResBlock, ConvBnReluBlock, DWConvBnReluBlock, SingleConvResBlock, ConvNextBlock
+from conv_blocks import ResBlock, ConvBnReluBlock, DWConvBnReluBlock, SingleConvResBlock, ConvNextBlock
 
 
 class UNet(nn.Module):
