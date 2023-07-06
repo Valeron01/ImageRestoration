@@ -1,1 +1,6 @@
 torch
+opencv-python
+numpy
+albumentations
+tqdm
+pytorch_lightning
