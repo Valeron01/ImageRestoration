@@ -2,41 +2,41 @@ import typing
 
 import torch
 from torch import nn
+from tqdm import trange
+
 from blocks import ResBlock, ConvBnReluBlock, DWConvBnReluBlock, SingleConvResBlock, ConvNextBlock
 
 
 class UNet(nn.Module):
-    def __init__(self, dim: int, depth: int, block: typing.Type = DWConvBnReluBlock):
+    def __init__(self, n_features_list, block: typing.Type = DWConvBnReluBlock):
         super().__init__()
+        self.n_features_list = n_features_list
 
-        self.depth = depth
+        self.depth = len(n_features_list)
 
         self.stem = nn.Sequential(
-            nn.Conv2d(3, dim, 7, 1, 3, bias=False),
-            nn.BatchNorm2d(dim),
+            nn.Conv2d(3, n_features_list[0], 7, 1, 3, bias=False),
+            nn.BatchNorm2d(n_features_list[0]),
             nn.LeakyReLU(inplace=True)
         )
 
         self.encoder = nn.ModuleList([
             block(
-                in_channels=2 ** current_depth * dim, out_channels=2 ** current_depth * dim * 2, stride=2
-            ) for current_depth in range(depth)
+                in_channels=in_features, out_channels=out_features, stride=2
+            ) for in_features, out_features in zip(n_features_list[:-1], n_features_list[1:])
         ])
 
         self.decoder = nn.ModuleList([
-            # 2 * 2 is here because:
-            # we need concatenate previous stages of encoder and decoder;
-            # because of up-scaling
             nn.Sequential(
                 block(
-                    in_channels=2 * 2 ** current_depth * dim * (2 if current_depth != depth - 1 else 1),
-                    out_channels=2 ** current_depth * dim
+                    in_channels=in_features * (1 if current_depth == 0 else 2),
+                    out_channels=out_features
                 ),
                 nn.UpsamplingBilinear2d(scale_factor=2)
-            ) for current_depth in reversed(range(depth))
+            ) for current_depth, (in_features, out_features) in enumerate(zip(reversed(n_features_list[1:]), reversed(n_features_list[:-1])))
         ])
 
-        self.resulting_layer = nn.Conv2d(2 * dim, 3, 1)
+        self.resulting_layer = nn.Conv2d(2 * n_features_list[0], 3, 1)
 
     def forward(self, x):
         stem = self.stem(x)
@@ -56,16 +56,14 @@ class UNet(nn.Module):
 
 
 if __name__ == '__main__':
-    model = UNet(64, 6, block=DWConvBnReluBlock)
+    model = UNet([64, 128, 256, 512, 1024], block=ConvNextBlock).cuda()
     num_params = 0
     for param in model.parameters():
         num_params += param.numel()
-
     print(f"Params num is: {num_params / 1e6}M")
 
+    with torch.no_grad():
+        for i in trange(1000):
+            result = model(torch.randn(16, 3, 256, 256, device="cuda")).sum().item()
 
-    print(model(torch.randn(1, 3, 256, 256)).shape)
-
-
-
-    torch.onnx.export(model, torch.randn(1, 3, 256, 256), "./model.onnx", opset_version=17)
+    # torch.onnx.export(model, torch.randn(1, 3, 256, 256), "./model.onnx", opset_version=17)

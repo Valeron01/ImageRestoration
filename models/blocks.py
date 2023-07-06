@@ -79,13 +79,16 @@ class ConvNextBlock(nn.Module):
             nn.Conv2d(in_channels, in_channels, 7, stride, 3, bias=False, groups=in_channels),
             nn.BatchNorm2d(in_channels),
 
-            nn.Conv2d(in_channels, in_channels * 2, 1),
+            nn.Conv2d(in_channels, in_channels * 4, 1),
 
-            nn.GELU(),
+            nn.LeakyReLU(),
 
-            nn.Conv2d(in_channels * 2, out_channels, 1)
+            nn.Conv2d(in_channels * 4, out_channels, 1)
+        )
+        self.identity = nn.Identity() if in_channels == out_channels else nn.Conv2d(
+            in_channels, out_channels, stride, stride
         )
 
     def forward(self, x):
-        return self.block(x)
+        return self.block(x) + self.identity(x)
 
