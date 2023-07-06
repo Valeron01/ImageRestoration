@@ -2,11 +2,11 @@ import typing
 
 import torch
 from torch import nn
-from blocks import ResBlock
+from blocks import ResBlock, ConvBnReluBlock, DWConvBnReluBlock, SingleConvResBlock, ConvNextBlock
 
 
 class UNet(nn.Module):
-    def __init__(self, dim: int, depth: int):
+    def __init__(self, dim: int, depth: int, block: typing.Type = DWConvBnReluBlock):
         super().__init__()
 
         self.depth = depth
@@ -18,7 +18,7 @@ class UNet(nn.Module):
         )
 
         self.encoder = nn.ModuleList([
-            ResBlock(
+            block(
                 in_channels=2 ** current_depth * dim, out_channels=2 ** current_depth * dim * 2, stride=2
             ) for current_depth in range(depth)
         ])
@@ -28,7 +28,7 @@ class UNet(nn.Module):
             # we need concatenate previous stages of encoder and decoder;
             # because of up-scaling
             nn.Sequential(
-                ResBlock(
+                block(
                     in_channels=2 * 2 ** current_depth * dim * (2 if current_depth != depth - 1 else 1),
                     out_channels=2 ** current_depth * dim
                 ),
@@ -55,13 +55,17 @@ class UNet(nn.Module):
         return self.resulting_layer(previous_stage)
 
 
-
-
-
 if __name__ == '__main__':
-    model = UNet(64, 3)
+    model = UNet(64, 6, block=DWConvBnReluBlock)
+    num_params = 0
+    for param in model.parameters():
+        num_params += param.numel()
+
+    print(f"Params num is: {num_params / 1e6}M")
+
+
     print(model(torch.randn(1, 3, 256, 256)).shape)
 
-    # print(model.encoder)
-    # print("-" * 40)
-    # print(model.decoder)
+
+
+    torch.onnx.export(model, torch.randn(1, 3, 256, 256), "./model.onnx", opset_version=17)
