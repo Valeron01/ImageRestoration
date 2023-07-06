@@ -17,7 +17,7 @@ class ImagesDataset(Dataset):
         image = cv2.imread(self.images_paths[item])
         image = np.divide(image, 255.0, dtype=np.float32)
         if self.augmentations is not None:
-            image = self.augmentations(image)
+            image = self.augmentations(image=image)["image"]
 
         image = torch.from_numpy(image).permute(2, 0, 1)
         return image
