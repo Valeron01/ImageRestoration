@@ -3,24 +3,24 @@ import torch.optim
 from torch import nn
 
 from modules.image_noiser import ImageNoiser
+from modules.rgb_to_bw_converter import RGBToBWConverter
 from modules.unet import UNet
 
 
-class SimpleDenoiser(pl.LightningModule):
+class SimpleColorizator(pl.LightningModule):
     def __init__(
             self,
             n_features_list,
             block,
-            variance_min, variance_max
     ):
         super().__init__()
-        self.model = UNet(n_features_list, block)
-        self.noiser = ImageNoiser(variance_min, variance_max)
+        self.model = UNet(n_features_list, block, in_channels=1)
+        self.noiser = RGBToBWConverter()
 
         self.save_hyperparameters()
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.model.parameters(), 5e-4)
+        optimizer = torch.optim.Adam(self.model.parameters(), 1e-4)
 
         return optimizer
 

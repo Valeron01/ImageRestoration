@@ -1,5 +1,5 @@
 # ImageDenoiser
-Training and inference of the U-Net denoising model
+Training and inference of the U-Net denoising (and colorization) model
 
 
 ### Dataset visualization

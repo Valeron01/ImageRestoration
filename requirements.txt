@@ -4,3 +4,5 @@ numpy
 albumentations
 tqdm
 pytorch_lightning
+timm
+kornia

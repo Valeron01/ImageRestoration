@@ -1,5 +1,3 @@
-import typing
-
 from torch import nn
 
 
@@ -17,12 +15,13 @@ class ResBlock(nn.Module):
             nn.LeakyReLU(inplace=True)
         )
 
-        self.identity = nn.Identity() if in_channels == out_channels else nn.Conv2d(
+        self.identity = nn.Identity() if (in_channels == out_channels and stride == 1) else nn.Conv2d(
             in_channels, out_channels, stride, stride
         )
 
     def forward(self, x):
-        return self.block(x) + self.identity(x)
+        res = self.block(x)
+        return res + self.identity(x)
 
 
 class SingleConvResBlock(nn.Module):
@@ -44,13 +43,13 @@ class SingleConvResBlock(nn.Module):
 
 
 class ConvBnReluBlock(nn.Module):
-    def __init__(self, in_channels: int, out_channels: int, stride: int = 1):
+    def __init__(self, in_channels: int, out_channels: int, stride: int = 1, negative_slope=1e-2):
         super().__init__()
 
         self.block = nn.Sequential(
             nn.Conv2d(in_channels, out_channels, 3, stride, 1, bias=False),
             nn.BatchNorm2d(out_channels),
-            nn.LeakyReLU(inplace=True)
+            nn.LeakyReLU(inplace=True, negative_slope=negative_slope)
         )
 
     def forward(self, x):
@@ -91,4 +90,3 @@ class ConvNextBlock(nn.Module):
 
     def forward(self, x):
         return self.block(x) + self.identity(x)
-
