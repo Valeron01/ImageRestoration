@@ -13,8 +13,8 @@ from modules.rgb_to_bw_converter import RGBToBWConverter
 
 
 def main():
-    model = ColorizatorGAN.load_from_checkpoint(
-        'C:\\Users\\elect\\PycharmProjects\\ImageDenoiser\\lighting\\checkpoints\\run_48\\epoch=0-step=14786.ckpt'
+    model = SimpleColorizator.load_from_checkpoint(
+        "" # Here path to a checkpoint
     ).eval()
 
     dataset = dataset_builder.build_dataset(sys.argv[1])
