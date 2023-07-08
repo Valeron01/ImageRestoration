@@ -4,7 +4,7 @@ import cv2
 import torch
 
 import dataset_builder
-from lit_modules.dncolorizator import DNColorizator
+from lit_modules.colorizator_gan import ColorizatorGAN
 from lit_modules.dngan import DNGAN
 from lit_modules.simple_colorizator import SimpleColorizator
 from lit_modules.simple_denoiser import SimpleDenoiser
@@ -13,8 +13,8 @@ from modules.rgb_to_bw_converter import RGBToBWConverter
 
 
 def main():
-    model = SimpleColorizator.load_from_checkpoint(
-        r"C:\Users\elect\PycharmProjects\ImageDenoiser\lighting\checkpoints\run_40\last.ckpt"
+    model = ColorizatorGAN.load_from_checkpoint(
+        'C:\\Users\\elect\\PycharmProjects\\ImageDenoiser\\lighting\\checkpoints\\run_48\\epoch=0-step=14786.ckpt'
     ).eval()
 
     dataset = dataset_builder.build_dataset(sys.argv[1])
@@ -26,7 +26,9 @@ def main():
             denoised_image = model(noised_image[None])[0]
 
         noised_image = torch.tile(noised_image, [3, 1, 1]) if noised_image.shape[0] == 1 else noised_image
-        concatenated_image = torch.cat([noised_image, denoised_image * 0.5 + 0.5, image], dim=2).permute(1, 2, 0).numpy()
+        concatenated_image = torch.cat([
+            noised_image, denoised_image * 0.5 + 0.5, image
+        ], dim=2).permute(1, 2, 0).numpy()
         cv2.imshow("Dataset sample", concatenated_image)
         cv2.waitKey(0)
 

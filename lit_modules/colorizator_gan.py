@@ -10,7 +10,7 @@ from modules.unet import UNet
 from modules.vgg_loss import VGGLoss
 
 
-class DNColorizator(pl.LightningModule):
+class ColorizatorGAN(pl.LightningModule):
     def __init__(
             self,
             n_features_list,
@@ -28,7 +28,7 @@ class DNColorizator(pl.LightningModule):
         self.discriminator = Discriminator()
 
         self.decolorizer = RGBToBWConverter()
-        self.perceptual_loss = VGGLoss()
+        # self.perceptual_loss = VGGLoss()
 
         self.save_hyperparameters(ignore=["generator_state_dict"])
 
@@ -36,8 +36,8 @@ class DNColorizator(pl.LightningModule):
         return self.generator(x)
 
     def configure_optimizers(self):
-        opt_g = torch.optim.Adam(self.generator.parameters(), lr=1e-4, betas=(0.9, 0.999))
-        opt_d = torch.optim.Adam(self.discriminator.parameters(), lr=1e-4, betas=(0.9, 0.999))
+        opt_g = torch.optim.Adam(self.generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
+        opt_d = torch.optim.Adam(self.discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
         return [opt_g, opt_d], []
 
     def training_step(self, images):
@@ -50,12 +50,13 @@ class DNColorizator(pl.LightningModule):
         self.toggle_optimizer(optimizer_g)
         colorized_images = self.generator(bw_images) * 0.5 + 0.5
 
-        disc_denoised = self.discriminator(colorized_images)
+        colorized_concated = torch.cat([bw_images, colorized_images], dim=1)
+        disc_denoised = self.discriminator(colorized_concated)
         ones = torch.ones_like(disc_denoised)
         gen_adv_loss = binary_cross_entropy_with_logits(disc_denoised, ones)
 
-        gen_content_loss = self.perceptual_loss(colorized_images, images)
-        g_loss = gen_content_loss + gen_adv_loss * 5e-2
+        gen_content_loss = nn.functional.l1_loss(colorized_images, images)  # self.perceptual_loss(colorized_images, images)
+        g_loss = gen_content_loss * 100 + gen_adv_loss
 
         self.log("g_loss", g_loss, prog_bar=True)
         self.log("gen_adv_loss", gen_adv_loss, prog_bar=True)
@@ -71,9 +72,11 @@ class DNColorizator(pl.LightningModule):
 
         self.toggle_optimizer(optimizer_d)
 
-        real_loss = binary_cross_entropy_with_logits(self.discriminator(images), ones)
+        real_loss = binary_cross_entropy_with_logits(self.discriminator(
+            torch.cat([bw_images, images], dim=1)
+        ), ones)
 
-        disc_denoised = self.discriminator(colorized_images.detach())
+        disc_denoised = self.discriminator(colorized_concated.detach())
         fake_loss = binary_cross_entropy_with_logits(disc_denoised, torch.zeros_like(disc_denoised))
 
         d_loss = (real_loss + fake_loss) / 2

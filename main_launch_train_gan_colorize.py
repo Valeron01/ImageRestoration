@@ -8,7 +8,7 @@ import pytorch_lightning.loggers
 from torch.utils.data import DataLoader
 
 import dataset_builder
-from lit_modules.dncolorizator import DNColorizator
+from lit_modules.colorizator_gan import ColorizatorGAN
 from lit_modules.dngan import DNGAN
 from lit_modules.simple_colorizator import SimpleColorizator
 from lit_modules.simple_denoiser import SimpleDenoiser
@@ -30,7 +30,7 @@ def main():
     train_dataset = dataset_builder.build_dataset(args.train_folder)
     val_dataset = dataset_builder.build_dataset(args.val_folder) if args.val_folder else None
 
-    train_dataset = torch.utils.data.Subset(train_dataset, range(15_000))
+#     train_dataset = torch.utils.data.Subset(train_dataset, range(15_000))
     val_dataset = torch.utils.data.Subset(val_dataset, range(1_000))
 
     train_loader = DataLoader(
@@ -44,7 +44,7 @@ def main():
     if args.unet_checkpoint_path:
         unet_state_dict = SimpleColorizator.load_from_checkpoint(args.unet_checkpoint_path).model.state_dict()
 
-    model = DNColorizator(
+    model = ColorizatorGAN(
         [64, 128, 256, 512, 512, 1024], block=ResBlock,
         generator_state_dict=unet_state_dict
     )

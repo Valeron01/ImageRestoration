@@ -10,7 +10,7 @@ class Discriminator(nn.Module):
         super().__init__()
 
         self.model = nn.Sequential(
-            nn.Conv2d(3, 64, 3, 1, 1),
+            nn.Conv2d(4, 64, 3, 1, 1),
             nn.LeakyReLU(inplace=True, negative_slope=0.2),
 
             ConvBnReluBlock(64, 64, 2, negative_slope=0.2),
